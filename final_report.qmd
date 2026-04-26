@@ -1,0 +1,38 @@
+---
+title: "Languages Of The World"
+author: "Zakaria Laraki, Luc Dinh"
+format: html
+---
+
+## Introduction
+
+
+## Data
+```{r}
+# Load tidyverse package
+library("tidyverse")
+
+# Read and store the data from the source
+endangered_status <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-12-23/endangered_status.csv')
+
+families <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-12-23/families.csv')
+
+languages <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-12-23/languages.csv')
+
+
+```
+
+```{r}
+# Make sure its working
+summary(families)
+```
+## Analysis
+
+
+## Visualization
+
+
+## Results
+
+
+## Conclusion
