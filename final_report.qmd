@@ -4,13 +4,21 @@ author: "Zakaria Laraki, Luc Dinh"
 format: html
 ---
 
-## Introduction
+## Introduction: The Global Pulse of Language: Mapping Diversity and the Risk of Extinction
+- Language is more than a tool for communication, it is a repositoty of history, culture, and unique cognitive perspectivess. While globalization has pushed a handful of languages to the forefront of international trade and digital communication, thousands of others are now facing the threat of extinction. 
 
+- In this project, we analyze the "Languages of the World" dataset to explore the spatial familial distribution of languages across the world. Our research focuses on identifying linguistic diversity hotspots and understanding the structural differences between widespead language families and those on the verge of vanishing. We aim to move beyond simple counts to inverstigae whether geographic isolation or family structure correlates with language endangerment.
+
+- Ultimately, we want to answer the following questions: 
+  - How is linguistic diversity geographically distributed across macro-areas? 
+  - Does the size or isolation of a language family serve as a predictor for endangerment? 
+  - What is the relationship between a language's geographic spread and its current status? 
 
 ## Data
 ```{r}
 # Load tidyverse package
 library("tidyverse")
+library(plotly)
 
 # Read and store the data from the source
 endangered_status <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-12-23/endangered_status.csv')
@@ -26,6 +34,41 @@ languages <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytue
 # Make sure its working
 summary(families)
 ```
+```{r}
+languages_clean <- languages |>
+  left_join(endangered_status, by = "id") |>
+  left_join(families, by = c("family_id" = "id")) |>
+  filter(!is.na(macroarea), !is.na(status_label))
+```
+
+```{r}
+languages_clean |>
+  count(status_label, sort = TRUE) |>
+  plot_ly(
+    x = ~n, 
+    y = ~reorder(status_label, n), 
+    type = "bar", 
+    color = ~status_label
+  ) |>
+  layout(
+    title = "Distribution of Language Endangerment Status",
+    xaxis = list(title = "Number of Languages"),
+    yaxis = list(title = "Status")
+  )
+```
+
+```{r}
+# Check at risk languages percentage
+languages_clean |>
+  mutate(at_risk = status_label != "not endangered") |>
+  count(at_risk) |>
+  mutate(percent = n / sum(n) * 100)
+```
+### Core finding 
+- Approximately $66%$ of languages are at risk(threatened, shifting, moribund, nearly extinct, or extinct) while only about $34%$ are not endagered. 
+- This highlights that the majority of the world's languages are experiencing some level of decline. 
+
+
 ## Analysis
 
 
