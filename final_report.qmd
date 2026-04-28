@@ -5,7 +5,7 @@ format: html
 ---
 
 ## Introduction: The Global Pulse of Language: Mapping Diversity and the Risk of Extinction
-- Language is more than a tool for communication, it is a repositoty of history, culture, and unique cognitive perspectivess. While globalization has pushed a handful of languages to the forefront of international trade and digital communication, thousands of others are now facing the threat of extinction. 
+- Language is more than a tool for communication, it is a repositoty of history, culture, and unique cognitive perspectives. While globalization has pushed a handful of languages to the forefront of international trade and digital communication, thousands of others are now facing the threat of extinction. 
 
 - In this project, we analyze the "Languages of the World" dataset to explore the spatial familial distribution of languages across the world. Our research focuses on identifying linguistic diversity hotspots and understanding the structural differences between widespead language families and those on the verge of vanishing. We aim to move beyond simple counts to inverstigae whether geographic isolation or family structure correlates with language endangerment.
 
@@ -15,11 +15,26 @@ format: html
   - What is the relationship between a language's geographic spread and its current status? 
 
 ## Data
-```{r}
-# Load tidyverse package
-library("tidyverse")
-library(plotly)
+In this project, we adopt different libraries to process and visualize the dataset
 
+
+```{r}
+# Load tidyverse package to help tidy and clean data sets
+library("tidyverse")
+
+# Used for visualizaing and plotting the dataset
+library(plotly)
+library(sf)
+
+```
+The primary source of our data is "The Languages of the World" dataset, curated from Glottolog 5.2.1, an open-access database in linguistics, maintained by the Max Planck Institute for Evolutionary Anthropology. Glottolog is the most comprehensive language database in linguistics, and contains information (names, genealogy, geographical information, endangerment status, etc.) of over 8,000 languages of the world. The database provide crucial linguistic information about the current status and diversity of the language in the world.
+
+The data initially consists of 3 datasets (endangered_status, families, and languages). The endangered_status contain 8567 observations and 3 variables, within the endangered_status, the status variables contains 6 value representing the current status of the languages based of their IDs. we also have 4832 observations with 2 variables for Families, 7418 observations of 11 variables for languages. These individuals files need to be combined into one structured data frame for better analysis, plotting and require in-depth cleaning to ensure that no missing values will affects the insights derived from it
+
+In this project, I read directly from the url links provided by the site github. I read and store the source data into 3 separate csv files
+The link to the site can be found here:  https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-12-23/readme.md
+
+```{r}
 # Read and store the data from the source
 endangered_status <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-12-23/endangered_status.csv')
 
@@ -31,15 +46,34 @@ languages <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytue
 ```
 
 ```{r}
-# Make sure its working
 summary(families)
 ```
+
+We started the data cleaning process by first joining the 3 csv files in to one single, structured variables "languages_clean" using comming variable of "id" and "family_id"
+Next, we filtered the dataset for non null value in the macroarea and status_label variable then convert several different variables into factor for better grouping and plotting
+Finally, we dropped any remaining rows containing NA in the dataset
 ```{r}
 languages_clean <- languages |>
+  # Join  datasets
   left_join(endangered_status, by = "id") |>
   left_join(families, by = c("family_id" = "id")) |>
-  filter(!is.na(macroarea), !is.na(status_label))
+  
+  # Filter for specific non-NA values 
+  filter(!is.na(macroarea), !is.na(status_label)) |>
+  
+  # Convert columns to factors
+  mutate(
+    macroarea = as.factor(macroarea),
+    family    = as.factor(family),
+    countries = as.factor(countries)
+  ) |>
+  
+  # 4. remove any remaining rows with NA in any column
+  drop_na()
+
+summary(languages_clean)
 ```
+
 
 ```{r}
 languages_clean |>
@@ -67,6 +101,111 @@ languages_clean |>
 ### Core finding 
 - Approximately $66%$ of languages are at risk(threatened, shifting, moribund, nearly extinct, or extinct) while only about $34%$ are not endagered. 
 - This highlights that the majority of the world's languages are experiencing some level of decline. 
+
+```{r}
+
+plot_ly( data = languages_clean,
+         x = ~macroarea,
+         type = "histogram",
+         marker = list(color = 'lightgreen',
+                       line = list(color = 'black', width = 1)))|> 
+  layout (
+           title = "Languages by Macroarea",
+           xaxis = list(title = "Macroarea"),
+           yaxis = list(title = "Number of Languages"),
+           margin = list(b = 100))
+         
+```
+
+
+
+
+```{r}
+plot_ly( data = languages_clean1,
+         x = ~is_isolate,
+         type = "histogram",
+         marker = list(color = 'steelblue',
+                       line = list(color = 'black', width = 1)))|> 
+  layout (
+           title = "language isolated",
+           xaxis = list(title = "Isolated"),
+           yaxis = list(title = "Number of Languages"),
+           margin = list(b = 100))
+```
+```{r}
+top_5_language <- languages_clean1 |>
+  separate_rows(countries, sep = ", ") |> 
+  count(countries, name = "language_count") |>
+  slice_max(order_by = language_count, n = 5) |>
+  arrange(desc(language_count))
+         
+plot_ly(
+  data = top_5_language,
+  x = ~reorder(countries, -language_count),
+  y = ~language_count,
+  type = "bar",
+  text = ~language_count,
+  textposition = 'auto',
+  marker = list(color = 'rgba(55, 128, 191, 0.7)',
+                line = list(color = 'rgba(55, 128, 191, 1.0)', width = 2))
+) |>
+  layout(
+    title = "Top 5 Countries with Highest Language Diversity",
+    xaxis = list(title = "Country Code"),
+    yaxis = list(title = "Number of Languages"),
+    margin = list(t = 50)
+  )
+```
+
+```{r}
+world_sf <- read_sf("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
+
+country_diversity <- languages_clean |>
+  separate_rows(countries, sep = "[,;]\\s*") |>
+  mutate(countries = toupper(trimws(as.character(countries)))) |> 
+  count(countries, name = "language_count")
+
+top_5_list <- country_diversity |> 
+  slice_max(order_by = language_count, n = 5) |> 
+  pull(countries)
+
+world_map_final <- world_sf |>
+  rename_with(tolower) |> 
+  mutate(iso_a2 = toupper(iso_a2)) |> 
+  left_join(country_diversity, by = c("iso_a2" = "countries")) |>
+  mutate(status = ifelse(iso_a2 %in% top_5_list, "Top 5 Diverse", "Other"))
+
+ggplot(data = world_map_final) +
+  geom_sf(aes(fill = language_count), color = "white", size = 0.1) +
+  geom_sf_text(aes(label = name), 
+               size = 1.5, 
+               color = "gray20", 
+               check_overlap = TRUE) + 
+  scale_fill_viridis_c(option = "mako", name = "Count") +
+  theme_void()
+```
+
+```{r}
+english_countries_count <- languages_clean1 |>
+  # Filter for the language name (case-insensitive just in case)
+  filter(tolower(name) == "english") |>
+  # Split the country codes into individual rows
+  separate_rows(countries, sep = "[^[:alnum:]]+") |>
+  # Count unique country codes
+  distinct(countries) |>
+  nrow()
+
+# Print the result
+print(paste("According to this dataset, English is used in", english_countries_count, "countries."))
+```
+```{r}
+ggplot(languages_clean1, aes(x = longitude, y = latitude, color = status_label)) +
+  geom_point(alpha = 0.6) +
+  scale_color_brewer(palette = "Set1") + # Uses a nice distinct color palette
+  theme_dark() + # Dark theme often makes colors "pop" for map data
+  labs(title = "Language Status Worldwide")
+```
+
 
 
 ## Analysis
