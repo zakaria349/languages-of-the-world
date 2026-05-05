@@ -44,7 +44,7 @@ languages <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytue
 ### Cleaning the data
 We started the data cleaning process by first joining the 3 csv files in to one single, structured variables "languages_clean" using common variable of "id" and "family_id"
 Next, we filtered the dataset for non null value in the macro-area and status_label variable then convert several different variables into factor for better grouping and plotting
-Finally, we dropped any remaining rows containing NA in the dataset
+Finally, we dropped any remaining rows containing NA in the dataset and group up status lable for many languages groups into standardized cases. This helps interpret the data more effectively
 ```{r}
 languages_clean <- languages |>
   # Join  datasets
@@ -75,6 +75,7 @@ summary(languages_clean)
 ### How is linguistic diversity geographically distributed?
 
 - Lets examine how the patterns vary geographically
+- In this graph, there is a vast gap in language diversity based on Macroarea. From the dataset, regions like Africa-North America, Eurasia, and South America have a significantly modest language variety compared to others. This may stem from the fact that these macroareas include regions connecting two or more areas together, which explains why they have so little diversity in language families (as languages shared between two continents are rare compared to localized ones). On the other hand, regions in parts of Africa and Papunesia were historically isolated from the rest of the globe; therefore, communities had less exposure and interaction, leading them to develop their own distinct linguistic systems.
 ```{r}
 
 plot_ly( data = languages_clean,
