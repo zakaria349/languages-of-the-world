@@ -1,20 +1,16 @@
----
-title: "Languages Of The World"
-author: "Zakaria Laraki, Luc Dinh"
-format: html
----
-
 ## Introduction: The Global Pulse of Language: Mapping Diversity and the Risk of Extinction
-- Language is more than a tool for communication, it is a repositoty of history, culture, and unique cognitive perspectives. While globalization has pushed a handful of languages to the forefront of international trade and digital communication, thousands of others are now facing the threat of extinction. 
 
-- In this project, we analyze the "Languages of the World" dataset to explore the spatial familial distribution of languages across the world. Our research focuses on identifying linguistic diversity hotspots and understanding the structural differences between widespead language families and those on the verge of vanishing. We aim to move beyond simple counts to inverstigae whether geographic isolation or family structure correlates with language endangerment.
+Language is more than a tool for communication, it is a repository of history, culture, and unique cognitive perspectives. While globalization has pushed a handful of languages to the forefront of international trade and digital communication, thousands of others are now facing the threat of extinction. 
 
-- Ultimately, we want to answer the following questions: 
+In this project, we analyze the "Languages of the World" dataset to explore the spatial familial distribution of languages across the world. Our research focuses on identifying linguistic diversity hotspots and understanding the structural differences between widespread language families and those on the verge of vanishing. We aim to move beyond simple counts to investigate whether geographic isolation or family structure correlates with language endangerment.
+
+Ultimately, we want to answer the following questions: 
   - How is linguistic diversity geographically distributed across macro-areas? 
   - Does the size or isolation of a language family serve as a predictor for endangerment? 
   - What is the relationship between a language's geographic spread and its current status? 
 
-## Data
+## Data Preparation
+### Loading packages and importing data
 In this project, we adopt different libraries to process and visualize the dataset
 
 
@@ -22,7 +18,7 @@ In this project, we adopt different libraries to process and visualize the datas
 # Load tidyverse package to help tidy and clean data sets
 library("tidyverse")
 
-# Used for visualizaing and plotting the dataset
+# Used for visualizing and plotting the dataset
 library(plotly)
 library(sf)
 
@@ -31,7 +27,7 @@ The primary source of our data is "The Languages of the World" dataset, curated 
 
 The data initially consists of 3 datasets (endangered_status, families, and languages). The endangered_status contain 8567 observations and 3 variables, within the endangered_status, the status variables contains 6 value representing the current status of the languages based of their IDs. we also have 4832 observations with 2 variables for Families, 7418 observations of 11 variables for languages. These individuals files need to be combined into one structured data frame for better analysis, plotting and require in-depth cleaning to ensure that no missing values will affects the insights derived from it
 
-In this project, I read directly from the url links provided by the site github. I read and store the source data into 3 separate csv files
+In this project, we read directly from the URL links provided by the site github. 
 The link to the site can be found here:  https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-12-23/readme.md
 
 ```{r}
@@ -45,12 +41,9 @@ languages <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytue
 
 ```
 
-```{r}
-summary(families)
-```
-
-We started the data cleaning process by first joining the 3 csv files in to one single, structured variables "languages_clean" using comming variable of "id" and "family_id"
-Next, we filtered the dataset for non null value in the macroarea and status_label variable then convert several different variables into factor for better grouping and plotting
+### Cleaning the data
+We started the data cleaning process by first joining the 3 csv files in to one single, structured variables "languages_clean" using common variable of "id" and "family_id"
+Next, we filtered the dataset for non null value in the macro-area and status_label variable then convert several different variables into factor for better grouping and plotting
 Finally, we dropped any remaining rows containing NA in the dataset
 ```{r}
 languages_clean <- languages |>
@@ -78,43 +71,17 @@ languages_clean <- languages |>
 
 summary(languages_clean)
 ```
+## Exploratory Data Analysis
+### How is linguistic diversity geographically distributed?
 
-
-```{r}
-languages_clean |>
-  count(status_group, sort = TRUE) |>
-  plot_ly(
-    x = ~status_group, 
-    y = ~n, 
-    type = "bar", 
-    marker = list(color = "darkgreen")
-  ) |>
-  layout(
-    title = "Distribution of Language Endangerment Status",
-    xaxis = list(title = "Number of Languages"),
-    yaxis = list(title = "Status")
-  )
-```
-
-
-```{r}
-# Check at risk languages percentage
-languages_clean |>
-  mutate(at_risk = status_group != "Safe") |>
-  count(at_risk) |>
-  mutate(percent = n / sum(n) * 100)
-```
-### Core finding 
-- Approximately $66%$ of languages are at risk(threatened, shifting, moribund, nearly extinct, or extinct) while only about $34%$ are not endagered. 
-- This highlights that the majority of the world's languages are experiencing some level of decline. 
-
+- Lets examine how the patterns vary geographically
 ```{r}
 
 plot_ly( data = languages_clean,
          x = ~macroarea,
          type = "histogram",
-         marker = list(color = 'lightgreen',
-                       line = list(color = 'black', width = 1)))|> 
+         colors = "Dark2"
+         )|> 
   layout (
            title = "Languages by Macroarea",
            xaxis = list(title = "Macroarea"),
@@ -123,78 +90,16 @@ plot_ly( data = languages_clean,
          
 ```
 
-
-
-
 ```{r}
-plot_ly( data = languages_clean,
-         x = ~is_isolate,
-         type = "histogram",
-         marker = list(color = 'steelblue',
-                       line = list(color = 'black', width = 1)))|> 
-  layout (
-           title = "language isolated",
-           xaxis = list(title = "Isolated"),
-           yaxis = list(title = "Number of Languages"),
-           margin = list(b = 100))
+# Check at risk languages percentage
+languages_clean |>
+  mutate(at_risk = status_group != "Safe") |>
+  count(at_risk) |>
+  mutate(percent = n / sum(n) * 100)
 ```
-```{r}
-top_5_language <- languages_clean |>
-  separate_rows(countries, sep = ", ") |> 
-  count(countries, name = "language_count") |>
-  slice_max(order_by = language_count, n = 5) |>
-  arrange(desc(language_count))
-         
-plot_ly(
-  data = top_5_language,
-  x = ~reorder(countries, -language_count),
-  y = ~language_count,
-  type = "bar",
-  text = ~language_count,
-  textposition = 'auto',
-  marker = list(color = 'rgba(55, 128, 191, 0.7)',
-                line = list(color = 'rgba(55, 128, 191, 1.0)', width = 2))
-) |>
-  layout(
-    title = "Top 5 Countries with Highest Language Diversity",
-    xaxis = list(title = "Country Code"),
-    yaxis = list(title = "Number of Languages"),
-    margin = list(t = 50)
-  )
-```
+Approximately $66\%$ of languages are at risk(threatened, shifting, moribund, nearly extinct, or extinct) while only about $34\%$ are not endagered. 
 
-```{r}
-world_sf <- read_sf("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
-
-country_diversity <- languages_clean |>
-  separate_rows(countries, sep = "[,;]\\s*") |>
-  mutate(countries = toupper(trimws(as.character(countries)))) |> 
-  count(countries, name = "language_count")
-
-top_5_list <- country_diversity |> 
-  slice_max(order_by = language_count, n = 5) |> 
-  pull(countries)
-
-world_map_final <- world_sf |>
-  rename_with(tolower) |> 
-  mutate(iso_a2 = toupper(iso_a2)) |> 
-  left_join(country_diversity, by = c("iso_a2" = "countries")) |>
-  mutate(status = ifelse(iso_a2 %in% top_5_list, "Top 5 Diverse", "Other"))
-
-ggplot(data = world_map_final) +
-  geom_sf(aes(fill = language_count), color = "white", size = 0.1) +
-  geom_sf_text(aes(label = name), 
-               size = 1.5, 
-               color = "gray20", 
-               check_overlap = TRUE) + 
-  scale_fill_viridis_c(option = "mako", name = "Count") +
-  theme_void()
-```
-
-
-## Analysis
-### How is linguistic diversity geographically distributed? 
-- Lets examine how the patterns vary geographically
+This highlights that the majority of the world's languages are experiencing some level of decline. 
 
 ```{r}
 languages_clean |>
@@ -215,11 +120,30 @@ languages_clean |>
     barmode = "stack"
   )
 ```
-- The distribution of language endangerment varies significantly across macroareas. Regions such as Africa: Eurasia and Africa: Eurasia: North America show a high proportion of safe languages, indicating relatively stable linguistic environments. In contrast, regions like Australia and parts of Eurasia display a much higher concentration of extinct and severly endangered languages, suggesting severe language loss. Additionally, areas such as Papunesia and South America exhibit a more balanced distribution across categories, with many languages at risk, indicating ongoing but not yet complete language decline.
 
-- These patterns suggest that geographic location and regional context play an important role in language survival, supporting the idea that linguistic diversity and endangerment are unevenly distributed across the world.
+The distribution of language endangerment varies significantly across macroareas. Regions such as Africa: Eurasia and Africa: Eurasia: North America show a high proportion of safe languages, indicating relatively stable linguistic environments. In contrast, regions like Australia and parts of Eurasia display a much higher concentration of extinct and severly endangered languages, suggesting severe language loss. Additionally, areas such as Papunesia and South America exhibit a more balanced distribution across categories, with many languages at risk, indicating ongoing but not yet complete language decline.
+
+These patterns suggest that geographic location and regional context play an important role in language survival, supporting the idea that linguistic diversity and endangerment are unevenly distributed across the world.
+
 
 ### Are language isolates more endangered than languages that belond to families? 
+
+```{r}
+plot_ly( data = languages_clean,
+         x = ~is_isolate,
+         type = "histogram",
+         colors = "Dark2"
+         )|> 
+  layout (
+           title = "language isolated",
+           xaxis = list(title = "Isolated"),
+           yaxis = list(title = "Number of Languages"),
+           margin = list(b = 100))
+```
+We can see that the number of isolated languages in our data is very small ($50$) in comparison with languages that belong to a family ($7956$)
+
+Considering this, we can use proportions instead of raw numbers to better demonstrate if isolated languages are more endagered 
+
 ```{r}
 languages_clean |>
   mutate(language_type = if_else(is_isolate, "Isolate", "Family")) |>
@@ -230,7 +154,8 @@ languages_clean |>
     x = ~status_group,
     y = ~prop,
     color = ~language_type,
-    type = "bar"
+    type = "bar",
+    colors = "Dark2"
   ) |>
   layout(
     title = "Endangerment Proportions: Isolates vs Families",
@@ -239,39 +164,77 @@ languages_clean |>
     barmode = "group"
   )
 ```
-- The comparison between language isolates and languages within families reveals a clear difference in vulnerability. Using proportions instea than raw counts allows for a fair comparison, since isolates represent a much smaller group. Isolates show a higher proportion of languages classified as “at risk” or “extinct,” and a significantly lower proportion of “safe” languages. In contrast, languages that belong to families are more likely to remain stable, with a larger share classified as “not endangered.”
 
-- This suggests that belonging to a language family may provide some resilience against extinction, possibly due to shared linguistic structure, cultural reinforcement, or broader speaker communities. Conversely, isolates, which lack related languages, appear to be more vulnerable to decline and disappearance.
-
-- Also, This represents the strongest evidence in our analysis that structural linguistic factors, such as family membership, may influence language survival.
-
-### now lets examine this using a map
 ```{r}
-plot_ly(
-  data = languages_clean |> filter(status_group == "Severely endangered"),
-  lat = ~latitude,
-  lon = ~longitude,
-  type = "scattergeo",
-  mode = "markers",
-  text = ~name,
-  marker = list(size = 4, color = "red", opacity = 0.7)
-) |>
-  layout(
-    title = "Global Distribution of Severely Endangered Languages",
-    geo = list(
-      showland = TRUE,
-      landcolor = "rgb(240,240,240)",
-      showcountries = TRUE
-    )
-  )
+languages_clean |>
+  mutate(language_type = if_else(is_isolate, "Isolate", "Family"),
+         at_risk = status_group != "Safe") |>
+  group_by(language_type) |>
+  summarise(prop_at_risk = mean(at_risk))
 ```
-- The spatial distribution of severely endangered languages reveals clear geographic clustering rather than a uniform global spread. High concentrations appear in regions such as Australia, Papua New Guinea, parts of Southeast Asia, and the western coasts of North and South America. These areas are known for high linguistic diversity, but also for smaller, more isolated language communities.
+Approximately $94\%$ of isolates are at risk compared to ony $66\%$ of family-based languages.
 
-- This pattern suggests that regions with historically high diversity are also more vulnerable to language loss, likely due to factors such as globalization, cultural assimilation, and limited speaker populations. In contrast, regions dominated by widely spoken languages show fewer severely endangered languages, highlighting the role of geographic and social concentration in language survival.
+The comparison between language isolates and languages within families reveals a clear difference in vulnerability. Using proportions instead than raw counts allows for a fair comparison, since isolates represent a much smaller group. Isolates show a higher proportion of languages classified as “at risk” or “extinct,” and a significantly lower proportion of “safe” languages. In contrast, languages that belong to families are more likely to remain stable, with a larger share classified as “not endangered.”
 
-- The spatial clustering observed here reinforces earlier findings that vulnerability is not random, but concentrated in specific high-diversity regions
+This suggests that belonging to a language family may provide some resilience against extinction, possibly due to shared linguistic structure, cultural reinforcement, or broader speaker communities. Conversely, isolates, which lack related languages, appear to be more vulnerable to decline and disappearance.
 
-## Results
+Also, This represents the strongest evidence in our analysis that structural linguistic factors, such as family membership, may influence language survival.
+
+### What is the relationship between a language's geographic spread and its current status?
+Lets analyse how severly endagered languages are spread using a map
+
+This map below illustrates the global distribution of language diversity, highlighting countries with the highest number of recorded languages.
+```{r}
+world_sf <- read_sf("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
+
+country_diversity <- languages_clean |>
+  separate_rows(countries, sep = "[,;]\\s*") |>
+  mutate(countries = toupper(trimws(as.character(countries)))) |> 
+  count(countries, name = "language_count")
+
+world_map_final <- world_sf |>
+  rename_with(tolower) |>
+  mutate(iso_a2 = toupper(iso_a2)) |>
+  left_join(country_diversity, by = c("iso_a2" = "countries"))
+
+ggplot(world_map_final) +
+  geom_sf(aes(fill = language_count), color = "white", size = 0.1) +
+  scale_fill_viridis_c(
+    option = "mako",
+    name = "Languages",
+    na.value = "gray90"
+  ) +
+  labs(
+    title = "Language Diversity by Country"
+  ) +
+  theme_void()
+```
+The map below highlights the global clustering of severely endangered languages, revealing that they are concentrated in regions with high linguistic diversity such as Southeast Asia, Oceania, and parts of the Americas, rather than being evenly distributed worldwide.
+```{r}
+ggplot() +
+  geom_sf(data = world_sf, fill = "gray95", color = "gray70", size = 0.1) +
+  geom_point(
+    data = languages_clean |> filter(status_group == "Severely endangered"),
+    aes(x = longitude, y = latitude),
+    color = "#2C7FB8",
+    size = 1,
+    alpha = 0.7
+  ) +
+  labs(
+    title = "Global Distribution of Severely Endangered Languages"
+  ) +
+  theme_void()
+```
+The spatial distribution of severely endangered languages reveals clear geographic clustering rather than a uniform global spread. High concentrations appear in regions such as Australia, Papua New Guinea, parts of Southeast Asia, and the western coasts of North and South America. These areas are known for high linguistic diversity, but also for smaller, more isolated language communities.
+
+This pattern suggests that regions with historically high diversity are also more vulnerable to language loss, likely due to factors such as globalization, cultural assimilation, and limited speaker populations. In contrast, regions dominated by widely spoken languages show fewer severely endangered languages, highlighting the role of geographic and social concentration in language survival.
+
+The spatial clustering observed here reinforces earlier findings that vulnerability is not random, but concentrated in specific high-diversity regions
 
 
-## Conclusion
+## Summary
+This analysis highlights that language endangerment is both widespread and unevenly distributed across the globe. A majority of languages are at risk, with only a small portion remaining stable. Geographic patterns reveal that regions with high linguistic diversity, such as parts of South America, Africa, and Oceania, also experience higher concentrations of endangered languages.
+
+Additionally, the comparison between language isolates and family-based languages shows that isolates are significantly more vulnerable, suggesting that linguistic structure and connectedness play an important role in language survival.
+
+Overall, these findings indicate that language loss is not random, but shaped by geographic, social, and structural factors. This reinforces the importance of targeted preservation efforts, particularly in regions and language groups that are most at risk.
